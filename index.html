@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SGT Clock">
+<meta name="theme-color" content="#1a1209">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<title>SGT Clock</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --face: #f0ece0;
+    --face-inner: #e8e4d8;
+    --bezel: #2c2014;
+    --bezel-light: #3d3020;
+    --tick-major: #1a1a1a;
+    --tick-minor: #888780;
+    --hand-main: #1a1a1a;
+    --hand-sec: #D85A30;
+    --num: #1a1a1a;
+    --bg-top: #0e0b06;
+    --bg-mid: #1a1209;
+    --label: #c4b99a;
+    --label-val: #f0ece0;
+    --separator: rgba(255,255,255,0.1);
+  }
+
+  html, body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: var(--bg-mid);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 16px);
+    gap: 28px;
+  }
+
+  .bg-dots {
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    max-width: 360px;
+  }
+
+  .city-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .city-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--hand-sec);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+
+  .city-name {
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    color: var(--label);
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  .clock-shell {
+    width: 100%;
+    background: var(--bezel);
+    border-radius: 20px;
+    padding: 14px;
+    border: 1px solid rgba(255,255,255,0.06);
+    position: relative;
+  }
+
+  .clock-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    pointer-events: none;
+  }
+
+  .clock-face-wrap {
+    background: var(--face);
+    border-radius: 10px;
+    padding: 20px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+  }
+
+  .brand-line {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: #888780;
+    text-transform: uppercase;
+    font-weight: 400;
+    text-align: center;
+  }
+
+  canvas#face {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .date-strip {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .date-cell {
+    flex: 1;
+    background: var(--face-inner);
+    border-radius: 7px;
+    padding: 7px 4px;
+    text-align: center;
+  }
+
+  .dc-label {
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: #888780;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .dc-val {
+    font-size: 15px;
+    font-weight: 500;
+    color: #1a1a1a;
+    display: block;
+  }
+
+  .digital-time {
+    font-size: 32px;
+    font-weight: 200;
+    color: var(--label-val);
+    letter-spacing: 0.08em;
+    font-variant-numeric: tabular-nums;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', monospace;
+    text-align: center;
+  }
+
+  .digital-ampm {
+    font-size: 14px;
+    color: var(--label);
+    letter-spacing: 0.1em;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+
+  .timezone-badge {
+    font-size: 11px;
+    color: var(--label);
+    letter-spacing: 0.08em;
+    text-align: center;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+<div class="bg-dots"></div>
+<div class="content">
+  <div class="city-header">
+    <div class="city-dot"></div>
+    <span class="city-name">Singapore</span>
+  </div>
+
+  <div class="clock-shell">
+    <div class="clock-face-wrap">
+      <div class="brand-line">Republic of Singapore · SGT</div>
+      <canvas id="face" width="600" height="380"></canvas>
+      <div class="date-strip">
+        <div class="date-cell"><span class="dc-label">day</span><span class="dc-val" id="dd-day">Mon</span></div>
+        <div class="date-cell"><span class="dc-label">date</span><span class="dc-val" id="dd-date">23</span></div>
+        <div class="date-cell"><span class="dc-label">month</span><span class="dc-val" id="dd-month">Jun</span></div>
+        <div class="date-cell"><span class="dc-label">year</span><span class="dc-val" id="dd-year">2026</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="digital-time"><span id="dig-time">--:--:--</span><span class="digital-ampm" id="dig-ampm">AM</span></div>
+    <div class="timezone-badge">UTC +8:00 · Asia/Singapore</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('face');
+const ctx = canvas.getContext('2d');
+const W = 600, H = 380;
+const cx = W / 2, cy = H / 2;
+const rx = W / 2 - 10, ry = H / 2 - 10;
+
+function getSGT() {
+  const now = new Date();
+  return new Date(now.getTime() + (now.getTimezoneOffset() + 480) * 60000);
+}
+
+function draw() {
+  const t = getSGT();
+  const hr = t.getHours() % 12;
+  const mn = t.getMinutes();
+  const sc = t.getSeconds();
+  const ms = t.getMilliseconds();
+
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#f0ece0';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#d4d0c4';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.strokeStyle = '#e8e4d8';
+  ctx.lineWidth = 1;
+  [0, 3, 6, 9].forEach(i => {
+    const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * rx * 0.6, cy + Math.sin(a) * ry * 0.6);
+    ctx.stroke();
+  });
+
+  for (let i = 0; i < 60; i++) {
+    const a = (i / 60) * Math.PI * 2 - Math.PI / 2;
+    const isMaj = i % 5 === 0;
+    const outerScale = 0.97;
+    const ox = cx + Math.cos(a) * rx * outerScale;
+    const oy = cy + Math.sin(a) * ry * outerScale;
+    const len = isMaj ? 0.13 : 0.055;
+    const ix = cx + Math.cos(a) * rx * (outerScale - len);
+    const iy = cy + Math.sin(a) * ry * (outerScale - len);
+    ctx.beginPath();
+    ctx.moveTo(ix, iy);
+    ctx.lineTo(ox, oy);
+    ctx.strokeStyle = isMaj ? '#1a1a1a' : '#b0ada4';
+    ctx.lineWidth = isMaj ? 3.5 : 1.5;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#1a1a1a';
+  [12,1,2,3,4,5,6,7,8,9,10,11].forEach((n, i) => {
+    const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
+    const nr = 0.74;
+    const nx = cx + Math.cos(a) * rx * nr;
+    const ny = cy + Math.sin(a) * ry * nr;
+    const isMain = n % 3 === 0;
+    ctx.font = `${isMain ? '500' : '400'} ${isMain ? 32 : 26}px -apple-system, sans-serif`;
+    ctx.fillText(n, nx, ny);
+  });
+
+  function drawHand(a, lenR, widthScale, color) {
+    const ex = cx + Math.cos(a) * rx * lenR;
+    const ey = cy + Math.sin(a) * ry * lenR;
+    const bx = cx + Math.cos(a + Math.PI) * rx * 0.1;
+    const by = cy + Math.sin(a + Math.PI) * ry * 0.1;
+    const w = Math.abs(Math.cos(a)) * widthScale * 1.2 + Math.abs(Math.sin(a)) * widthScale;
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(ex, ey);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(w, widthScale * 0.7);
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  }
+
+  const hA = ((hr + mn / 60 + sc / 3600) / 12) * Math.PI * 2 - Math.PI / 2;
+  const mA = ((mn + sc / 60 + ms / 60000) / 60) * Math.PI * 2 - Math.PI / 2;
+  const sA = ((sc + ms / 1000) / 60) * Math.PI * 2 - Math.PI / 2;
+
+  drawHand(hA, 0.47, 9, '#1a1a1a');
+  drawHand(mA, 0.67, 6, '#1a1a1a');
+
+  const sex = cx + Math.cos(sA) * rx * 0.77;
+  const sey = cy + Math.sin(sA) * ry * 0.77;
+  const sbx = cx + Math.cos(sA + Math.PI) * rx * 0.2;
+  const sby = cy + Math.sin(sA + Math.PI) * ry * 0.2;
+  ctx.beginPath();
+  ctx.moveTo(sbx, sby);
+  ctx.lineTo(sex, sey);
+  ctx.strokeStyle = '#D85A30';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+  ctx.fillStyle = '#D85A30';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fill();
+
+  const pad = n => String(n).padStart(2, '0');
+  const fullH = t.getHours();
+  const ampm = fullH >= 12 ? 'PM' : 'AM';
+  const h12 = fullH % 12 || 12;
+  document.getElementById('dig-time').textContent = `${pad(h12)}:${pad(mn)}:${pad(sc)}`;
+  document.getElementById('dig-ampm').textContent = ampm;
+
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('dd-day').textContent = days[t.getDay()];
+  document.getElementById('dd-date').textContent = t.getDate();
+  document.getElementById('dd-month').textContent = months[t.getMonth()];
+  document.getElementById('dd-year').textContent = t.getFullYear();
+}
+
+draw();
+setInterval(draw, 50);
+</script>
+</body>
+</html>
