@@ -6,354 +6,312 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SGT Clock">
-<meta name="theme-color" content="#1a1209">
+<meta name="theme-color" content="#000000">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-192.svg">
 <title>SGT Clock</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;overflow:hidden;background:#000;touch-action:pan-x;-webkit-font-smoothing:antialiased}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center}
 
-  :root {
-    --face: #f0ece0;
-    --face-inner: #e8e4d8;
-    --bezel: #2c2014;
-    --bezel-light: #3d3020;
-    --tick-major: #1a1a1a;
-    --tick-minor: #888780;
-    --hand-main: #1a1a1a;
-    --hand-sec: #D85A30;
-    --num: #1a1a1a;
-    --bg-top: #0e0b06;
-    --bg-mid: #1a1209;
-    --label: #c4b99a;
-    --label-val: #f0ece0;
-    --separator: rgba(255,255,255,0.1);
-  }
+.slider{display:flex;width:500%;height:100dvh;transition:transform 0.4s cubic-bezier(0.4,0,0.2,1)}
+.slide{width:20%;height:100dvh;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
 
-  html, body {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-    background: var(--bg-mid);
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
+.dots{position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 16px);left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:10}
+.dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.25);transition:background 0.3s}
+.dot.active{background:#fff}
 
-  body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100dvh;
-    padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 16px);
-    gap: 28px;
-  }
-
-  .bg-dots {
-    position: fixed;
-    inset: 0;
-    background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 24px 24px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .content {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 24px;
-    width: 100%;
-    max-width: 360px;
-  }
-
-  .city-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .city-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--hand-sec);
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(0.85); }
-  }
-
-  .city-name {
-    font-size: 13px;
-    letter-spacing: 0.18em;
-    color: var(--label);
-    text-transform: uppercase;
-    font-weight: 400;
-  }
-
-  .clock-shell {
-    width: 100%;
-    background: var(--bezel);
-    border-radius: 20px;
-    padding: 14px;
-    border: 1px solid rgba(255,255,255,0.06);
-    position: relative;
-  }
-
-  .clock-shell::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 20px;
-    border-top: 1px solid rgba(255,255,255,0.12);
-    pointer-events: none;
-  }
-
-  .clock-face-wrap {
-    background: var(--face);
-    border-radius: 10px;
-    padding: 20px 16px 16px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    position: relative;
-  }
-
-  .brand-line {
-    font-size: 9px;
-    letter-spacing: 0.22em;
-    color: #888780;
-    text-transform: uppercase;
-    font-weight: 400;
-    text-align: center;
-  }
-
-  canvas#face {
-    width: 100%;
-    height: auto;
-    display: block;
-  }
-
-  .date-strip {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .date-cell {
-    flex: 1;
-    background: var(--face-inner);
-    border-radius: 7px;
-    padding: 7px 4px;
-    text-align: center;
-  }
-
-  .dc-label {
-    font-size: 9px;
-    letter-spacing: 0.1em;
-    color: #888780;
-    text-transform: uppercase;
-    display: block;
-    margin-bottom: 2px;
-  }
-
-  .dc-val {
-    font-size: 15px;
-    font-weight: 500;
-    color: #1a1a1a;
-    display: block;
-  }
-
-  .digital-time {
-    font-size: 32px;
-    font-weight: 200;
-    color: var(--label-val);
-    letter-spacing: 0.08em;
-    font-variant-numeric: tabular-nums;
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', monospace;
-    text-align: center;
-  }
-
-  .digital-ampm {
-    font-size: 14px;
-    color: var(--label);
-    letter-spacing: 0.1em;
-    margin-left: 4px;
-    vertical-align: middle;
-  }
-
-  .timezone-badge {
-    font-size: 11px;
-    color: var(--label);
-    letter-spacing: 0.08em;
-    text-align: center;
-    opacity: 0.7;
-  }
+canvas.fullclock{position:absolute;inset:0;width:100%;height:100%}
 </style>
 </head>
 <body>
-<div class="bg-dots"></div>
-<div class="content">
-  <div class="city-header">
-    <div class="city-dot"></div>
-    <span class="city-name">Singapore</span>
-  </div>
-
-  <div class="clock-shell">
-    <div class="clock-face-wrap">
-      <div class="brand-line">Republic of Singapore · SGT</div>
-      <canvas id="face" width="600" height="380"></canvas>
-      <div class="date-strip">
-        <div class="date-cell"><span class="dc-label">day</span><span class="dc-val" id="dd-day">Mon</span></div>
-        <div class="date-cell"><span class="dc-label">date</span><span class="dc-val" id="dd-date">23</span></div>
-        <div class="date-cell"><span class="dc-label">month</span><span class="dc-val" id="dd-month">Jun</span></div>
-        <div class="date-cell"><span class="dc-label">year</span><span class="dc-val" id="dd-year">2026</span></div>
-      </div>
-    </div>
-  </div>
-
-  <div>
-    <div class="digital-time"><span id="dig-time">--:--:--</span><span class="digital-ampm" id="dig-ampm">AM</span></div>
-    <div class="timezone-badge">UTC +8:00 · Asia/Singapore</div>
-  </div>
+<div class="slider" id="slider">
+  <div class="slide" id="s0" style="background:#000"><canvas class="fullclock" id="c0"></canvas></div>
+  <div class="slide" id="s1" style="background:#0a0a0a"><canvas class="fullclock" id="c1"></canvas></div>
+  <div class="slide" id="s2" style="background:#050510"><canvas class="fullclock" id="c2"></canvas></div>
+  <div class="slide" id="s3" style="background:#080600"><canvas class="fullclock" id="c3"></canvas></div>
+  <div class="slide" id="s4" style="background:#030a03"><canvas class="fullclock" id="c4"></canvas></div>
+</div>
+<div class="dots">
+  <div class="dot active"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
+  <div class="dot"></div>
 </div>
 
 <script>
-const canvas = document.getElementById('face');
-const ctx = canvas.getContext('2d');
-const W = 600, H = 380;
-const cx = W / 2, cy = H / 2;
-const rx = W / 2 - 10, ry = H / 2 - 10;
+const slider = document.getElementById('slider');
+let cur=0, startX=0, moved=false;
 
-function getSGT() {
-  const now = new Date();
-  return new Date(now.getTime() + (now.getTimezoneOffset() + 480) * 60000);
+slider.addEventListener('touchstart', e=>{startX=e.touches[0].clientX;moved=false;},{passive:true});
+slider.addEventListener('touchmove', e=>{moved=Math.abs(e.touches[0].clientX-startX)>8;},{passive:true});
+slider.addEventListener('touchend', e=>{
+  if(!moved) return;
+  const dx=e.changedTouches[0].clientX-startX;
+  if(dx<-50&&cur<4) cur++;
+  else if(dx>50&&cur>0) cur--;
+  slider.style.transform=`translateX(-${cur*20}%)`;
+  document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===cur));
+});
+
+function getSGT(){const n=new Date();return new Date(n.getTime()+(n.getTimezoneOffset()+480)*60000);}
+
+function resizeAll(){
+  document.querySelectorAll('canvas.fullclock').forEach(cv=>{
+    cv.width=cv.offsetWidth*devicePixelRatio;
+    cv.height=cv.offsetHeight*devicePixelRatio;
+  });
+}
+resizeAll();
+window.addEventListener('resize',resizeAll);
+
+// shared hand draw — elliptical mapping so numbers hug the edges
+function getClockParams(cv){
+  const dpr=devicePixelRatio;
+  const W=cv.width,H=cv.height;
+  const cx=W/2,cy=H/2;
+  // radius: use 90% of the smaller half so clock fills screen edge-to-edge
+  const rBase=Math.min(W,H)/2*0.97;
+  // for elliptical: rx follows screen width, ry follows screen height
+  const rx=W/2*0.94, ry=H/2*0.94;
+  return{W,H,cx,cy,rx,ry,dpr};
 }
 
-function draw() {
-  const t = getSGT();
-  const hr = t.getHours() % 12;
-  const mn = t.getMinutes();
-  const sc = t.getSeconds();
-  const ms = t.getMilliseconds();
-
-  ctx.clearRect(0, 0, W, H);
-
-  ctx.fillStyle = '#f0ece0';
-  ctx.beginPath();
-  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#d4d0c4';
-  ctx.lineWidth = 2;
-  ctx.stroke();
-
-  ctx.strokeStyle = '#e8e4d8';
-  ctx.lineWidth = 1;
-  [0, 3, 6, 9].forEach(i => {
-    const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(a) * rx * 0.6, cy + Math.sin(a) * ry * 0.6);
-    ctx.stroke();
-  });
-
-  for (let i = 0; i < 60; i++) {
-    const a = (i / 60) * Math.PI * 2 - Math.PI / 2;
-    const isMaj = i % 5 === 0;
-    const outerScale = 0.97;
-    const ox = cx + Math.cos(a) * rx * outerScale;
-    const oy = cy + Math.sin(a) * ry * outerScale;
-    const len = isMaj ? 0.13 : 0.055;
-    const ix = cx + Math.cos(a) * rx * (outerScale - len);
-    const iy = cy + Math.sin(a) * ry * (outerScale - len);
-    ctx.beginPath();
-    ctx.moveTo(ix, iy);
-    ctx.lineTo(ox, oy);
-    ctx.strokeStyle = isMaj ? '#1a1a1a' : '#b0ada4';
-    ctx.lineWidth = isMaj ? 3.5 : 1.5;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-  }
-
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#1a1a1a';
-  [12,1,2,3,4,5,6,7,8,9,10,11].forEach((n, i) => {
-    const a = (i / 12) * Math.PI * 2 - Math.PI / 2;
-    const nr = 0.74;
-    const nx = cx + Math.cos(a) * rx * nr;
-    const ny = cy + Math.sin(a) * ry * nr;
-    const isMain = n % 3 === 0;
-    ctx.font = `${isMain ? '500' : '400'} ${isMain ? 32 : 26}px -apple-system, sans-serif`;
-    ctx.fillText(n, nx, ny);
-  });
-
-  function drawHand(a, lenR, widthScale, color) {
-    const ex = cx + Math.cos(a) * rx * lenR;
-    const ey = cy + Math.sin(a) * ry * lenR;
-    const bx = cx + Math.cos(a + Math.PI) * rx * 0.1;
-    const by = cy + Math.sin(a + Math.PI) * ry * 0.1;
-    const w = Math.abs(Math.cos(a)) * widthScale * 1.2 + Math.abs(Math.sin(a)) * widthScale;
-    ctx.beginPath();
-    ctx.moveTo(bx, by);
-    ctx.lineTo(ex, ey);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(w, widthScale * 0.7);
-    ctx.lineCap = 'round';
-    ctx.stroke();
-  }
-
-  const hA = ((hr + mn / 60 + sc / 3600) / 12) * Math.PI * 2 - Math.PI / 2;
-  const mA = ((mn + sc / 60 + ms / 60000) / 60) * Math.PI * 2 - Math.PI / 2;
-  const sA = ((sc + ms / 1000) / 60) * Math.PI * 2 - Math.PI / 2;
-
-  drawHand(hA, 0.47, 9, '#1a1a1a');
-  drawHand(mA, 0.67, 6, '#1a1a1a');
-
-  const sex = cx + Math.cos(sA) * rx * 0.77;
-  const sey = cy + Math.sin(sA) * ry * 0.77;
-  const sbx = cx + Math.cos(sA + Math.PI) * rx * 0.2;
-  const sby = cy + Math.sin(sA + Math.PI) * ry * 0.2;
-  ctx.beginPath();
-  ctx.moveTo(sbx, sby);
-  ctx.lineTo(sex, sey);
-  ctx.strokeStyle = '#D85A30';
-  ctx.lineWidth = 2.5;
-  ctx.lineCap = 'round';
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.arc(cx, cy, 8, 0, Math.PI * 2);
-  ctx.fillStyle = '#D85A30';
-  ctx.fill();
-  ctx.beginPath();
-  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
-  ctx.fillStyle = '#1a1a1a';
-  ctx.fill();
-
-  const pad = n => String(n).padStart(2, '0');
-  const fullH = t.getHours();
-  const ampm = fullH >= 12 ? 'PM' : 'AM';
-  const h12 = fullH % 12 || 12;
-  document.getElementById('dig-time').textContent = `${pad(h12)}:${pad(mn)}:${pad(sc)}`;
-  document.getElementById('dig-ampm').textContent = ampm;
-
-  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('dd-day').textContent = days[t.getDay()];
-  document.getElementById('dd-date').textContent = t.getDate();
-  document.getElementById('dd-month').textContent = months[t.getMonth()];
-  document.getElementById('dd-year').textContent = t.getFullYear();
+// number positions hug the 4 cardinal edges
+function numPos(n,cx,cy,rx,ry){
+  const a=(n/12)*Math.PI*2-Math.PI/2;
+  // pull numbers very close to edge
+  const nr=0.82;
+  return{x:cx+Math.cos(a)*rx*nr, y:cy+Math.sin(a)*ry*nr};
 }
 
-draw();
-setInterval(draw, 50);
+function drawHand(ctx,cx,cy,rx,ry,angleFrac,lenFrac,tailFrac,strokeW,color){
+  const a=angleFrac*Math.PI*2-Math.PI/2;
+  const ex=cx+Math.cos(a)*rx*lenFrac, ey=cy+Math.sin(a)*ry*lenFrac;
+  const bx=cx+Math.cos(a+Math.PI)*rx*tailFrac, by=cy+Math.sin(a+Math.PI)*ry*tailFrac;
+  ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(ex,ey);
+  ctx.strokeStyle=color;ctx.lineWidth=strokeW;ctx.lineCap='round';ctx.stroke();
+}
+
+// ── STYLE 0: Brutalist white on black (HUGE hands) ──
+function drawC0(t,cv){
+  const ctx=cv.getContext('2d');
+  const{W,H,cx,cy,rx,ry}=getClockParams(cv);
+  const h=t.getHours()%12,m=t.getMinutes(),s=t.getSeconds(),ms=t.getMilliseconds();
+  ctx.clearRect(0,0,W,H);
+
+  // outer ring
+  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.strokeStyle='#222';ctx.lineWidth=4;ctx.stroke();
+
+  // ticks
+  for(let i=0;i<60;i++){
+    const a=(i/60)*Math.PI*2-Math.PI/2,maj=i%5===0;
+    const len=maj?rx*0.09:rx*0.04;
+    const ox=cx+Math.cos(a)*rx*0.97,oy=cy+Math.sin(a)*ry*0.97;
+    const ix=cx+Math.cos(a)*(rx*0.97-len),iy=cy+Math.sin(a)*(ry*0.97-len);
+    ctx.beginPath();ctx.moveTo(ix,iy);ctx.lineTo(ox,oy);
+    ctx.strokeStyle=maj?'#fff':'#555';ctx.lineWidth=maj?5:2;ctx.lineCap='round';ctx.stroke();
+  }
+
+  // numbers — only 12,3,6,9 huge
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  [12,3,6,9].forEach((n,i)=>{
+    const a=(i/4)*Math.PI*2-Math.PI/2;
+    const p=numPos(n,cx,cy,rx,ry);
+    ctx.font=`700 ${Math.round(rx*0.18)}px -apple-system,sans-serif`;
+    ctx.fillStyle='#fff';ctx.fillText(n,p.x,p.y);
+  });
+
+  // hour hand
+  drawHand(ctx,cx,cy,rx,ry,(h+m/60+s/3600)/12,0.52,0.12,rx*0.045,'#fff');
+  // minute hand
+  drawHand(ctx,cx,cy,rx,ry,(m+s/60+ms/60000)/60,0.74,0.12,rx*0.03,'#fff');
+  // second
+  const sA=((s+ms/1000)/60);
+  drawHand(ctx,cx,cy,rx,ry,sA,0.8,0.2,rx*0.012,'#D85A30');
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.022,0,Math.PI*2);ctx.fillStyle='#D85A30';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.01,0,Math.PI*2);ctx.fillStyle='#000';ctx.fill();
+
+  // digital bottom
+  const pad=n=>String(n).padStart(2,'0');
+  const fh=t.getHours(),fm=t.getMinutes(),fs=t.getSeconds();
+  const ampm=fh>=12?'PM':'AM';
+  ctx.font=`200 ${Math.round(rx*0.1)}px -apple-system,sans-serif`;
+  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.textAlign='center';
+  ctx.fillText(`${pad(fh%12||12)}:${pad(fm)}:${pad(fs)} ${ampm}`,cx,H*0.91);
+}
+
+// ── STYLE 1: Dark slate with white hands ──
+function drawC1(t,cv){
+  const ctx=cv.getContext('2d');
+  const{W,H,cx,cy,rx,ry}=getClockParams(cv);
+  const h=t.getHours()%12,m=t.getMinutes(),s=t.getSeconds(),ms=t.getMilliseconds();
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
+  ctx.strokeStyle='#333';ctx.lineWidth=3;ctx.stroke();
+
+  for(let i=0;i<60;i++){
+    const a=(i/60)*Math.PI*2-Math.PI/2,maj=i%5===0,quarter=i%15===0;
+    const len=quarter?rx*0.1:maj?rx*0.07:rx*0.035;
+    const ox=cx+Math.cos(a)*rx*0.96,oy=cy+Math.sin(a)*ry*0.96;
+    ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*(rx*0.96-len),cy+Math.sin(a)*(ry*0.96-len));ctx.lineTo(ox,oy);
+    ctx.strokeStyle=quarter?'#fff':maj?'#aaa':'#444';ctx.lineWidth=quarter?6:maj?3.5:1.5;ctx.lineCap='round';ctx.stroke();
+  }
+
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  [12,1,2,3,4,5,6,7,8,9,10,11].forEach((n,i)=>{
+    const p=numPos(n,cx,cy,rx,ry);
+    const big=n%3===0;
+    ctx.font=`${big?'500':'300'} ${Math.round(big?rx*0.13:rx*0.09)}px -apple-system,sans-serif`;
+    ctx.fillStyle=big?'#fff':'#666';ctx.fillText(n,p.x,p.y);
+  });
+
+  drawHand(ctx,cx,cy,rx,ry,(h+m/60+s/3600)/12,0.5,0.12,rx*0.038,'#fff');
+  drawHand(ctx,cx,cy,rx,ry,(m+s/60+ms/60000)/60,0.72,0.12,rx*0.025,'#ccc');
+  drawHand(ctx,cx,cy,rx,ry,(s+ms/1000)/60,0.78,0.22,rx*0.01,'#D85A30');
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.02,0,Math.PI*2);ctx.fillStyle='#D85A30';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.009,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
+
+  const pad=n=>String(n).padStart(2,'0');
+  const fh=t.getHours();
+  ctx.font=`200 ${Math.round(rx*0.085)}px -apple-system,sans-serif`;
+  ctx.fillStyle='rgba(255,255,255,0.25)';ctx.textAlign='center';
+  ctx.fillText(`${pad(fh%12||12)}:${pad(t.getMinutes())}:${pad(t.getSeconds())} ${fh>=12?'PM':'AM'}`,cx,H*0.91);
+}
+
+// ── STYLE 2: Neon blue ──
+function drawC2(t,cv){
+  const ctx=cv.getContext('2d');
+  const{W,H,cx,cy,rx,ry}=getClockParams(cv);
+  const h=t.getHours()%12,m=t.getMinutes(),s=t.getSeconds(),ms=t.getMilliseconds();
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fillStyle='#05050f';ctx.fill();
+  ctx.strokeStyle='#0af';ctx.lineWidth=3;ctx.stroke();
+  ctx.beginPath();ctx.ellipse(cx,cy,rx*0.97,ry*0.97,0,0,Math.PI*2);ctx.strokeStyle='#0af3';ctx.lineWidth=1;ctx.stroke();
+
+  for(let i=0;i<60;i++){
+    const a=(i/60)*Math.PI*2-Math.PI/2,maj=i%5===0;
+    const len=maj?rx*0.09:rx*0.04;
+    const ox=cx+Math.cos(a)*rx*0.96,oy=cy+Math.sin(a)*ry*0.96;
+    ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*(rx*0.96-len),cy+Math.sin(a)*(ry*0.96-len));ctx.lineTo(ox,oy);
+    ctx.strokeStyle=maj?'#0af':'#0af5';ctx.lineWidth=maj?4:1.5;ctx.lineCap='round';ctx.stroke();
+  }
+
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#0af';
+  [12,1,2,3,4,5,6,7,8,9,10,11].forEach((n,i)=>{
+    const p=numPos(n,cx,cy,rx,ry);
+    const big=n%3===0;
+    ctx.font=`${big?'500':'300'} ${Math.round(big?rx*0.13:rx*0.085)}px monospace`;
+    ctx.fillStyle=big?'#0af':'#0af7';ctx.fillText(n,p.x,p.y);
+  });
+
+  drawHand(ctx,cx,cy,rx,ry,(h+m/60+s/3600)/12,0.5,0.12,rx*0.038,'#0af');
+  drawHand(ctx,cx,cy,rx,ry,(m+s/60+ms/60000)/60,0.72,0.12,rx*0.025,'#0af');
+  drawHand(ctx,cx,cy,rx,ry,(s+ms/1000)/60,0.8,0.22,rx*0.01,'#f05');
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.022,0,Math.PI*2);ctx.fillStyle='#f05';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.01,0,Math.PI*2);ctx.fillStyle='#05050f';ctx.fill();
+
+  const pad=n=>String(n).padStart(2,'0');
+  const fh=t.getHours();
+  ctx.font=`300 ${Math.round(rx*0.085)}px monospace`;
+  ctx.fillStyle='rgba(0,170,255,0.3)';ctx.textAlign='center';
+  ctx.fillText(`${pad(fh%12||12)}:${pad(t.getMinutes())}:${pad(t.getSeconds())} ${fh>=12?'PM':'AM'}`,cx,H*0.91);
+}
+
+// ── STYLE 3: Gold luxury ──
+function drawC3(t,cv){
+  const ctx=cv.getContext('2d');
+  const{W,H,cx,cy,rx,ry}=getClockParams(cv);
+  const h=t.getHours()%12,m=t.getMinutes(),s=t.getSeconds(),ms=t.getMilliseconds();
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fillStyle='#0a0800';ctx.fill();
+  ctx.strokeStyle='#c8a84a';ctx.lineWidth=5;ctx.stroke();
+  ctx.beginPath();ctx.ellipse(cx,cy,rx*0.95,ry*0.95,0,0,Math.PI*2);ctx.strokeStyle='#5a4a10';ctx.lineWidth=1.5;ctx.stroke();
+
+  for(let i=0;i<60;i++){
+    const a=(i/60)*Math.PI*2-Math.PI/2,maj=i%5===0,quarter=i%15===0;
+    const len=quarter?rx*0.1:maj?rx*0.07:rx*0.035;
+    const ox=cx+Math.cos(a)*rx*0.94,oy=cy+Math.sin(a)*ry*0.94;
+    ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*(rx*0.94-len),cy+Math.sin(a)*(ry*0.94-len));ctx.lineTo(ox,oy);
+    ctx.strokeStyle=quarter?'#c8a84a':maj?'#a08030':'#4a3a08';ctx.lineWidth=quarter?6:maj?3:1.5;ctx.lineCap='round';ctx.stroke();
+  }
+
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  [12,1,2,3,4,5,6,7,8,9,10,11].forEach((n,i)=>{
+    const p=numPos(n,cx,cy,rx,ry);
+    const big=n%3===0;
+    ctx.font=`${big?'500':'300'} ${Math.round(big?rx*0.13:rx*0.085)}px Georgia,serif`;
+    ctx.fillStyle=big?'#c8a84a':'#7a6020';ctx.fillText(n,p.x,p.y);
+  });
+
+  drawHand(ctx,cx,cy,rx,ry,(h+m/60+s/3600)/12,0.5,0.12,rx*0.04,'#c8a84a');
+  drawHand(ctx,cx,cy,rx,ry,(m+s/60+ms/60000)/60,0.72,0.12,rx*0.027,'#a08030');
+  drawHand(ctx,cx,cy,rx,ry,(s+ms/1000)/60,0.8,0.22,rx*0.012,'#D85A30');
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.025,0,Math.PI*2);ctx.fillStyle='#c8a84a';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.011,0,Math.PI*2);ctx.fillStyle='#0a0800';ctx.fill();
+
+  const pad=n=>String(n).padStart(2,'0');
+  const fh=t.getHours();
+  ctx.font=`300 ${Math.round(rx*0.085)}px Georgia,serif`;
+  ctx.fillStyle='rgba(200,168,74,0.3)';ctx.textAlign='center';
+  ctx.fillText(`${pad(fh%12||12)}:${pad(t.getMinutes())}:${pad(t.getSeconds())} ${fh>=12?'PM':'AM'}`,cx,H*0.91);
+}
+
+// ── STYLE 4: Forest green ──
+function drawC4(t,cv){
+  const ctx=cv.getContext('2d');
+  const{W,H,cx,cy,rx,ry}=getClockParams(cv);
+  const h=t.getHours()%12,m=t.getMinutes(),s=t.getSeconds(),ms=t.getMilliseconds();
+  ctx.clearRect(0,0,W,H);
+  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.fillStyle='#020a02';ctx.fill();
+  ctx.strokeStyle='#2d7a2d';ctx.lineWidth=4;ctx.stroke();
+
+  for(let i=0;i<60;i++){
+    const a=(i/60)*Math.PI*2-Math.PI/2,maj=i%5===0;
+    const len=maj?rx*0.09:rx*0.04;
+    const ox=cx+Math.cos(a)*rx*0.96,oy=cy+Math.sin(a)*ry*0.96;
+    ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*(rx*0.96-len),cy+Math.sin(a)*(ry*0.96-len));ctx.lineTo(ox,oy);
+    ctx.strokeStyle=maj?'#3d9a3d':'#1a4a1a';ctx.lineWidth=maj?4:1.5;ctx.lineCap='round';ctx.stroke();
+  }
+
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  [12,1,2,3,4,5,6,7,8,9,10,11].forEach((n,i)=>{
+    const p=numPos(n,cx,cy,rx,ry);
+    const big=n%3===0;
+    ctx.font=`${big?'500':'300'} ${Math.round(big?rx*0.13:rx*0.085)}px -apple-system,sans-serif`;
+    ctx.fillStyle=big?'#4ab04a':'#1f5a1f';ctx.fillText(n,p.x,p.y);
+  });
+
+  drawHand(ctx,cx,cy,rx,ry,(h+m/60+s/3600)/12,0.5,0.12,rx*0.038,'#4ab04a');
+  drawHand(ctx,cx,cy,rx,ry,(m+s/60+ms/60000)/60,0.72,0.12,rx*0.025,'#2d7a2d');
+  drawHand(ctx,cx,cy,rx,ry,(s+ms/1000)/60,0.8,0.22,rx*0.01,'#D85A30');
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.022,0,Math.PI*2);ctx.fillStyle='#4ab04a';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,rx*0.01,0,Math.PI*2);ctx.fillStyle='#020a02';ctx.fill();
+
+  const pad=n=>String(n).padStart(2,'0');
+  const fh=t.getHours();
+  ctx.font=`200 ${Math.round(rx*0.085)}px -apple-system,sans-serif`;
+  ctx.fillStyle='rgba(74,176,74,0.3)';ctx.textAlign='center';
+  ctx.fillText(`${pad(fh%12||12)}:${pad(t.getMinutes())}:${pad(t.getSeconds())} ${fh>=12?'PM':'AM'}`,cx,H*0.91);
+}
+
+const drawFns=[drawC0,drawC1,drawC2,drawC3,drawC4];
+const canvases=document.querySelectorAll('canvas.fullclock');
+
+function tick(){
+  const t=getSGT();
+  canvases.forEach((cv,i)=>drawFns[i](t,cv));
+}
+
+tick();
+setInterval(tick,50);
+
+async function keepAwake(){
+  if('wakeLock' in navigator){try{await navigator.wakeLock.request('screen');}catch(e){}}
+}
+keepAwake();
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')keepAwake();});
 </script>
 </body>
 </html>
